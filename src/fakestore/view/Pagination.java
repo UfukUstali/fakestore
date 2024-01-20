@@ -108,6 +108,7 @@ class Pagination {
     }
 
     protected void cleanUp() {
+        if (!canPaginate) return;
         for (Button button : buttons) button.cleanUp();
         prev.cleanUp();
         next.cleanUp();

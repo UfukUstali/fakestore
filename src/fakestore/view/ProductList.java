@@ -20,7 +20,7 @@ class ProductList {
 
     protected void draw() {
         Arrays.stream(cards).forEach(card -> {
-            card.getEl().setParentY(el.getY());
+            card.getCard().getEl().setParentY(el.getY());
             card.draw();
         });
         if (pagination.canPaginate()) pagination.getEl().setParentY(el.getY())
@@ -37,12 +37,12 @@ class ProductList {
         this.pagination.init();
         this.cards = new ProductCard[products.products().length];
         for (int j = 0; j < products.products().length; j++) {
-            ProductCard card = new ProductCard(products.products()[j])
+            ProductCard card = new ProductCard(products.products()[j]).getCard()
                     .getEl()
                     .setParentX(el.getX())
                     .setY(16 + j * (200 + 32))
                     .setWidth(640).setHeight(160)
-                    .getOwner();
+                    .getOwner().getOwner();
             card.init();
             cards[j] = card;
         }

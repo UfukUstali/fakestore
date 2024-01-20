@@ -388,11 +388,11 @@ public class View extends PApplet implements IView {
 
         for (int i = 0; i < products.length; i++) {
             products[i] = new ProductCard(String.valueOf((int) Math.floor(random(1, 100))))
-                    .getEl()
+                    .getCard().getEl()
                     .setX(width / 2 - 320).setY(16 + i * (200 + 32))
                     .setWidth(640).setHeight(160)
                     .getOwner()
-                    .setZ(0);
+                    .setZ(0).getOwner();
             products[i].init();
         }
 
@@ -405,7 +405,7 @@ public class View extends PApplet implements IView {
         currentRoute = () -> {
             int y = scroll;
             Arrays.stream(products).forEach(product -> {
-                product.getEl().setParentY(y);
+                product.getCard().getEl().setParentY(y);
                 product.draw();
             });
         };
