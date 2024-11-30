@@ -2,24 +2,18 @@ package fakestore.model;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
 import java.net.*;
 import java.util.*;
 
 class Fetch {
-    /**
-     * cache to dedupe requests
-     * key: path
-     * value: response
-     */
     private final Map<String, Response> cache = new HashMap<>();
     private final String baseUrl;
 
-    public Fetch(String baseUrl) {
+    Fetch(String baseUrl) {
         this.baseUrl = baseUrl;
     }
 
-    public IResponse fetch(String path) {
+    IResponse fetch(String path) {
         if (cache.containsKey(path)) return cache.get(path);
         Response response = new Response(Status.PENDING, null, null);
         Thread thread = new Thread(() -> {
@@ -28,10 +22,6 @@ class Fetch {
                 int retries = 0;
                 // Define the URL
                 URL url = new URI(baseUrl + path).toURL();
-
-                System.out.println("query: " + url.getQuery());
-                System.out.println("path: " + url.getPath());
-
                 do {
                     // Open a connection to the URL
                     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -70,7 +60,7 @@ class Fetch {
                     } finally {
                         connection.disconnect();
                     }
-                } while(MAX_RETRIES > retries);
+                } while (MAX_RETRIES > retries);
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -82,7 +72,7 @@ class Fetch {
         return response;
     }
 
-    public IResponse fetch(String path, Boolean force) {
+    IResponse fetch(String path, Boolean force) {
         if (force) {
             cache.remove(path);
         }

@@ -1,22 +1,42 @@
 package fakestore.view;
 
-import com.google.gson.*;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import fakestore.Result;
-import fakestore.controller.Controller;
+import fakestore.controller.IController;
 import fakestore.controller.IRoute;
+import fakestore.model.ICart;
 import fakestore.model.IResponse;
-import fakestore.model.Products;
 import fakestore.model.Product;
+import fakestore.model.Products;
 import processing.core.*;
 import processing.event.MouseEvent;
 
+import java.text.NumberFormat;
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 
-public class View extends PApplet implements IView {
+/**
+ * Basic structure of the application:
+ * <p>
+ * Routes are defined as private methods that are passed to the controller by method reference.
+ * When a route is called, it returns a Runnable that is called (by the controller) when the route is left and sets the currentRoute to a
+ * {@link IPage} that is called every frame.
+ * <p>
+ * Layouts and their lifetime is managed by the specific route that called them.
+ * Only exception to this is the header, which is always present.
+ * <p>
+ * Components are classes that compose {@link Element} and are used to render the UI.
+ * They are configurable with a builder pattern and the creating party is responsible for their lifetime.
+ * Usually, their draw method is called in the route. But they can also be used in headless mode.
+ * This is useful when there are overlapping sections in the UI with the {@link Button} component.
+ */
+class View extends PApplet implements IView {
+    // singleton
     private static final View instance = new View();
     private boolean isTrackpad = false;
-    private Controller controller;
+    private IController controller;
     private IPage header;
     private Optional<IPage> layout = Optional.empty();
     private IPage currentRoute;
@@ -30,8 +50,8 @@ public class View extends PApplet implements IView {
     private PGraphics thumbnailMask;
     private PGraphics mainMask;
     private PGraphics previewMask;
-    private final Toasts toasts = Toasts.getInstance(this);
-    private Button goToTop;
+    private final Toasts toasts = new Toasts(this);
+    private Optional<Button> goToTop = Optional.empty();
 
     private View() {
     }
@@ -46,6 +66,11 @@ public class View extends PApplet implements IView {
 
     @Override
     public void setup() {
+//        PSurfaceAWT awtSurface = (PSurfaceAWT) surface;
+//        Frame frame = ((PSurfaceAWT.SmoothCanvas) awtSurface.getNative()).getFrame(); TODO change the title bar color if can figure out how
+        windowResizable(false);
+        surface.setTitle("FakeStore");
+        surface.setIcon(loadImage("icon.png"));
         for (int i = 300; i <= 800; i += 100) fonts.put(String.valueOf(i), createFont(i + ".ttf", 32));
         noStroke();
         rectMode(CORNER);
@@ -53,22 +78,9 @@ public class View extends PApplet implements IView {
         ellipseMode(CORNER);
         colorMode(RGB, 255, 255, 255, 1.0f);
         strokeWeight(2);
-        Rating.load();
-        background(rgb(23, 23, 23));
-        header();
-//        controller.navigateTo("home");
-//        controller.navigateTo("error", "error", "A special error occurred");
-//        controller.navigateTo("product", "product", "1");
-//        controller.navigateTo("search", "term", "a");
-        controller.navigateTo("category", "category", "smartphones");
-        goToTop = new Button()
-                .getEl()
-                .setX(width - 64).setY(height - 64)
-                .setWidth(32).setHeight(32).getOwner()
-                .setZ(99)
-                .setBgColor(rgb(251, 146, 60))
-                .setLabel("^").setLabelColor(rgb(38, 38, 38)).setLabelSize(20).setFont(fonts.get("800"))
-                .setCallback(() -> scroll = 65);
+        loadShape("stars/empty.svg");
+        loadShape("stars/half.svg");
+        loadShape("stars/full.svg");
         // thumbnail mask to round corners
         thumbnailMask = createGraphics(160, 160);
         thumbnailMask.beginDraw();
@@ -77,19 +89,22 @@ public class View extends PApplet implements IView {
         thumbnailMask.rect(0, 0, 160, 160, 10);
         thumbnailMask.endDraw();
         // main mask to round corners
-        mainMask = createGraphics(320, 320);
+        mainMask = createGraphics(224, 224);
         mainMask.beginDraw();
         mainMask.background(0);
         mainMask.fill(255);
-        mainMask.rect(0, 0, 320, 320, 10);
+        mainMask.rect(0, 0, 224, 224, 10);
         mainMask.endDraw();
         // preview mask to round corners
-        previewMask = createGraphics(48, 48);
+        previewMask = createGraphics(36, 36);
         previewMask.beginDraw();
         previewMask.background(0);
         previewMask.fill(255);
-        previewMask.rect(0, 0, 48, 48, 10);
+        previewMask.rect(0, 0, 36, 36, 10);
         previewMask.endDraw();
+        background(rgb(23, 23, 23));
+        header();
+        controller.navigateTo("home");
     }
 
     @Override
@@ -116,7 +131,7 @@ public class View extends PApplet implements IView {
         header.render();
         stroke(rgb(38, 38, 38));
         strokeWeight(1);
-        goToTop.draw();
+        goToTop.ifPresent(Button::draw);
         noStroke();
         strokeWeight(2);
         toasts.draw();
@@ -129,7 +144,7 @@ public class View extends PApplet implements IView {
         return svgs.computeIfAbsent(filename, super::loadShape);
     }
 
-    protected void requestImageAndPreview(String url) {
+    void requestImageAndPreview(String url) {
         images.computeIfAbsent(url, (s) -> {
             Thread thread = new Thread(() -> {
                 PImage src = loadImage(url, "jpg");
@@ -137,8 +152,8 @@ public class View extends PApplet implements IView {
                     thumbnails.put(url, Result.error("Image could not be loaded"));
                     return;
                 }
-                PImage image = createImage(320, 320, ARGB);
-                PImage preview = createImage(48, 48, ARGB);
+                PImage image = createImage(224, 224, ARGB);
+                PImage preview = createImage(36, 36, ARGB);
                 int a = Math.min(src.width, src.height);
 
                 image.copy(src, 0, 0, a, a, 0, 0, image.width, image.height);
@@ -154,15 +169,15 @@ public class View extends PApplet implements IView {
         });
     }
 
-    protected Result<PImage, String> getImage(String url) {
+    Result<PImage, String> getImage(String url) {
         return images.getOrDefault(url, Result.error("request was not made"));
     }
 
-    protected Result<PImage, String> getPreviewImage(String url) {
+    Result<PImage, String> getPreviewImage(String url) {
         return previewImages.getOrDefault(url, Result.error("request was not made"));
     }
 
-    protected void requestThumbnail(String url) {
+    void requestThumbnail(String url) {
         thumbnails.computeIfAbsent(url, (s) -> {
             Thread thread = new Thread(() -> {
                 PImage src = loadImage(url, "jpg");
@@ -183,41 +198,43 @@ public class View extends PApplet implements IView {
         });
     }
 
-    protected Result<PImage, String> getThumbnail(String url) {
+    Result<PImage, String> getThumbnail(String url) {
         return thumbnails.getOrDefault(url, Result.error("request was not made"));
     }
 
-    protected PFont getFont(String s) {
+    PFont getFont(String s) {
         return fonts.get(s);
     }
 
-    protected int rgb(int r, int g, int b, float a) {
+    int rgb(int r, int g, int b, float a) {
         return color(r, g, b, a);
     }
 
-    protected int rgb(int r, int g, int b) {
+    int rgb(int r, int g, int b) {
         return color(r, g, b);
     }
 
-    protected void toast(String message) {
+    void toast(String message) {
         toasts.add(message);
     }
 
-    protected void toast(String message, String id) {
-        toasts.add(message, id);
-    }
-
-    protected String[] lineWrap(String text, int width, int textSize, int lineCount) {
+    String[] lineWrap(String text, int width, int textSize, int lineCount) {
+        if (text.isEmpty()) return new String[]{""};
+        if (lineCount < 1) throw new IllegalArgumentException("lineCount must be greater than 0");
+        if (lineCount == 1) return new String[]{truncate(text, width, textSize, true)};
         // text size effects text width
+        pushStyle();
         textSize(textSize);
         // early return if text fits in one line
         if (textWidth(text) <= width) {
+            popStyle();
             return new String[]{text};
         }
         ArrayList<String> lines = new ArrayList<>();
         String[] words = text.split(" ");
         StringBuilder line = new StringBuilder();
-        for (String word : words) {
+        for (int i = 0; i < words.length; i++) {
+            String word = words[i];
             // if line is empty, add word
             if (line.isEmpty()) {
                 float textWidth = textWidth(word);
@@ -231,18 +248,19 @@ public class View extends PApplet implements IView {
             if (textWidth <= width) {
                 line.append(" ").append(word);
                 // if word is last word, add line to lines and break
-                if (word.equals(words[words.length - 1])) {
+                if (i == words.length - 1) {
                     lines.add(line.toString());
                     break;
                 }
                 continue;
             }
-            // if word doesn't fit in line, add line to lines and start new line
+            // else, add line to lines and start new line
             lines.add(line.toString());
             // if lineCount is reached, truncate last line and break
             if (lines.size() == lineCount) {
                 // if word is last word, no need to truncate
-                if (word.equals(words[words.length - 1])) break;
+//                System.out.println(word + " " + words[words.length - 1]);
+//                if (word.equals(words[words.length - 1])) break;
                 lines.set(lines.size() - 1, truncate(line.toString(), width, textSize, false));
                 break;
             }
@@ -250,10 +268,11 @@ public class View extends PApplet implements IView {
             if (textWidth(word) > width) break;
             line = new StringBuilder(word);
         }
+        popStyle();
         return lines.toArray(String[]::new);
     }
 
-    protected String truncate(String text, int width, int textSize, boolean optional) {
+    String truncate(String text, int width, int textSize, boolean optional) {
         // text size effects text width
         textSize(textSize);
         String suffix = "...";
@@ -282,7 +301,7 @@ public class View extends PApplet implements IView {
         return line.toString();
     }
 
-    protected String getFormatted(String categories) {
+    String getFormatted(String categories) {
         StringBuilder formatted = new StringBuilder();
         for (var s : categories.split("-")) {
             formatted.append(s.substring(0, 1).toUpperCase()).append(s.substring(1)).append(" ");
@@ -290,16 +309,39 @@ public class View extends PApplet implements IView {
         return formatted.toString();
     }
 
-    protected Result<String, Boolean> safeGet(JsonObject json, String key) {
+    Result<String, Boolean> safeGet(JsonObject json, String key) {
         if (json == null || !json.has(key)) return Result.error(false);
         JsonElement element = json.get(key);
         if (element.isJsonNull() || !element.isJsonPrimitive()) return Result.error(false);
         return Result.ok(element.getAsString());
     }
 
+    private void setPageHeight(int pageHeight) {
+        scroll = 65;
+        if (pageHeight > height - 65) {
+            goToTop = Optional.of(new Button()
+                    .getEl()
+                    .setX(width - 64).setY(height - 64)
+                    .setWidth(32).setHeight(32).getOwner()
+                    .setZ(99)
+                    .setBgColor(rgb(251, 146, 60))
+                    .setLabel("^").setLabelColor(rgb(38, 38, 38)).setLabelSize(20).setFont(fonts.get("800"))
+                    .setCallback(() -> scroll = 65));
+        } else {
+            goToTop.ifPresent(Button::cleanUp);
+            goToTop = Optional.empty();
+        }
+        this.pageHeight = pageHeight;
+    }
+
+    private void setPageHeight() {
+        setPageHeight(height - 65);
+    }
+
 //------------------------------------------------------     LAYOUTS     ------------------------------------------------------
 
     private void header() {
+        // headless mode: this button only needs to exist as a clickable element but doesn't need to be drawn
         new Button()
                 .getEl()
                 .setX(0).setY(0)
@@ -341,9 +383,16 @@ public class View extends PApplet implements IView {
             line(0, 64, width, 64);
             noStroke();
 
-            cart.draw();
             logo.draw();
             search.draw();
+            // balance
+            double balance = controller.getBalance();
+            fill(rgb(255, 255, 255));
+            textFont(fonts.get("600"), 20);
+            textAlign(RIGHT, CENTER);
+            text(NumberFormat.getCurrencyInstance(Locale.GERMANY).format(balance), cart.getEl().getX() - 16, 32);
+            textAlign(LEFT, TOP);
+            cart.draw();
         };
     }
 
@@ -386,24 +435,25 @@ public class View extends PApplet implements IView {
     private Runnable home(JsonObject args) {
         ProductCard[] products = new ProductCard[15];
 
-        for (int i = 0; i < products.length; i++) {
+        IntStream.range(0, products.length).forEach(i -> {
             products[i] = new ProductCard(String.valueOf((int) Math.floor(random(1, 100))))
                     .getCard().getEl()
-                    .setX(width / 2 - 320).setY(16 + i * (200 + 32))
+                    .setX(320).setY(16 + 24 + 16 + i * (200 + 32))
                     .setWidth(640).setHeight(160)
                     .getOwner()
                     .setZ(0).getOwner();
             products[i].init();
-        }
+        });
 
-        scroll = 65;
-
-        pageHeight = 16 + products.length * (products[0].getHeight() + 32);
+        setPageHeight(16 + 24 + 16 + products.length * (products[0].getHeight() + 32));
 
         Runnable layoutCleanUp = defaultLayout();
 
         currentRoute = () -> {
             int y = scroll;
+            fill(rgb(255, 255, 255));
+            textFont(fonts.get("800"), 32);
+            text("Home", 320, 16 + y);
             Arrays.stream(products).forEach(product -> {
                 product.getCard().getEl().setParentY(y);
                 product.draw();
@@ -448,9 +498,7 @@ public class View extends PApplet implements IView {
 
         Runnable layoutCleanUp = defaultLayout();
 
-        scroll = 65;
-
-        pageHeight = height - 65;
+        setPageHeight();
 
         currentRoute = () -> {
             int y = scroll;
@@ -463,7 +511,7 @@ public class View extends PApplet implements IView {
                 case SUCCESS -> {
                     if (!productList.isReady()) {
                         productList.setList(response.data(Products.class));
-                        pageHeight = 16 + 32 + 16 + productList.getHeight();
+                        setPageHeight(16 + 32 + 16 + productList.getHeight());
                         return;
                     }
                     productList.getEl().setParentY(y)
@@ -511,9 +559,7 @@ public class View extends PApplet implements IView {
 
         Runnable layoutCleanUp = defaultLayout();
 
-        scroll = 65;
-
-        pageHeight = height - 65;
+        setPageHeight();
 
         currentRoute = () -> {
             int y = scroll;
@@ -526,7 +572,7 @@ public class View extends PApplet implements IView {
                 case SUCCESS -> {
                     if (!productList.isReady()) {
                         productList.setList(response.data(Products.class));
-                        pageHeight = 16 + 32 + 16 + productList.getHeight();
+                        setPageHeight(16 + 32 + 16 + productList.getHeight());
                         return;
                     }
                     productList.getEl().setParentY(y)
@@ -561,21 +607,39 @@ public class View extends PApplet implements IView {
             case OK -> controller.get("/products/" + id.value());
         };
 
-        Carousel carousel = new Carousel()
-                .getEl()
-                .setX(320).setY(65 + 16 + 32)
-                .setWidth(320).setHeight(320).getOwner();
+        ICart cart = controller.getCart();
 
-        Loading loading = new Loading()
-                .getEl()
+        Carousel carousel = new Carousel().getEl()
+                .setParentX(320)
+                .setX(0).setY(16)
+                .setWidth(224).setHeight(224)
+                .getOwner();
+
+        ArrayList<String> title = new ArrayList<>();
+        ArrayList<String> description = new ArrayList<>();
+        String[] price = new String[1];
+
+        Rating rating = new Rating().getEl()
+                .setParentX(320 + 224 + 8)
+                .setY(16)
+                .setWidth(120).setHeight(32)
+                .getOwner();
+
+        Loading loading = new Loading().getEl()
                 .setX(320).setY(65 + 16 + 32)
-                .setWidth(640).setHeight(450).getOwner();
+                .setWidth(640).setHeight(450)
+                .getOwner();
+
+        CartButtons cartButtons = new CartButtons().getEl()
+                .setParentX(320)
+                .setY(carousel.getEl().getY() + carousel.getHeight() + 16)
+                .setWidth(640).setHeight(32)
+                .getOwner();
+        cartButtons.init();
 
         Runnable layoutCleanUp = defaultLayout();
 
-        scroll = 65;
-
-        pageHeight = height - 65;
+        setPageHeight();
 
         currentRoute = () -> {
             int y = scroll;
@@ -583,12 +647,57 @@ public class View extends PApplet implements IView {
                 case PENDING -> loading.draw();
                 case ERROR -> controller.navigateTo("error", "error", response.error());
                 case SUCCESS -> {
+                    Product product = response.data(Product.class);
                     if (!carousel.isReady()) {
-                        carousel.setUrls(response.data(Product.class).images());
-                        pageHeight = 16 + 32 + 16 + carousel.getHeight();
+                        carousel.setUrls(product.images());
+                        title.addAll(List.of(lineWrap(product.title(), 640 - carousel.getEl().getWidth() - 32, 32, 2)));
+                        rating.setRating(product.rating());
+                        description.addAll(List.of(lineWrap(product.description(), 640 - carousel.getEl().getWidth() - 32, 20, 5)));
+                        price[0] = NumberFormat.getCurrencyInstance(Locale.GERMANY).format(product.price());
+                        cartButtons.setProduct(product);
+                        setPageHeight(16 + 32 + 16 + carousel.getHeight());
                         return;
                     }
+                    // images
                     carousel.getEl().setParentY(y)
+                            .getOwner().draw();
+                    int x = carousel.getEl().getX() + carousel.getEl().getWidth() + 8;
+                    // brand
+                    fill(rgb(255, 255, 255, 0.75f));
+                    textFont(fonts.get("600"), 16);
+                    text(response.data(Product.class).brand(), x, 16 + y);
+                    int currentHeight = 16 + 16 + 8;
+                    // title
+                    fill(rgb(255, 255, 255));
+                    textFont(fonts.get("800"), 32);
+                    for (int i = 0; i < title.size(); i++) {
+                        text(title.get(i), x, currentHeight + y + i * 32);
+                    }
+                    currentHeight += 8 + title.size() * 32;
+                    // rating
+                    rating.getEl().setParentY(y).setY(currentHeight)
+                            .getOwner().draw();
+                    // stock
+                    fill(rgb(255, 255, 255, 0.75f));
+                    textFont(fonts.get("400"), 20);
+                    textAlign(RIGHT, TOP);
+                    text("Stock: " + (product.stock() - cart.getBoughtQuantity(product)), 320 + 640, currentHeight + y);
+                    textAlign(LEFT, TOP);
+                    currentHeight += rating.getEl().getHeight() + 8;
+                    // description
+                    fill(rgb(255, 255, 255, 0.75f));
+                    textFont(fonts.get("400"), 20);
+                    for (int i = 0; i < description.size(); i++) {
+                        text(description.get(i), x, currentHeight + y + i * 20);
+                    }
+                    // price
+                    fill(rgb(224, 40, 18));
+                    textFont(getFont("700"), 32);
+                    textAlign(RIGHT, BOTTOM);
+                    text(price[0], 320 + 640, carousel.getHeight() + y + 16);
+                    textAlign(LEFT, TOP);
+                    // cart buttons
+                    cartButtons.getEl().setParentY(y)
                             .getOwner().draw();
                 }
             }
@@ -597,27 +706,59 @@ public class View extends PApplet implements IView {
         return () -> {
             layoutCleanUp.run();
             carousel.cleanUp();
+            cartButtons.cleanUp();
         };
     }
 
     private Runnable cart(JsonObject args) {
-        CartSummary cartSummary = new CartSummary();
-//        CartList cartList = new CartList();
+        ICart cart = controller.getCart();
+
+        int[] i = {0};
+
+        CartCard[] cards = Arrays.stream(cart.getProductsInCart()).map((product) -> {
+            CartCard card = new CartCard(product)
+                    .getCard().getEl()
+                    .setX(320).setY(16 + i[0] * (200 + 32))
+                    .setWidth(640).setHeight(160)
+                    .getOwner()
+                    .setZ(0).getOwner();
+            card.init();
+            i[0]++;
+            return card;
+        }).toArray(CartCard[]::new);
+
+        Button goHome = new Button()
+                .getEl()
+                .setParentX(0).setParentY(65)
+                .setX(width / 2 - 64).setY(height / 2 - 16)
+                .setWidth(128).setHeight(32).getOwner()
+                .setZ(0)
+                .setLabel("Go Home").setLabelSize(20).setFont(fonts.get("800"))
+                .setBgColor(rgb(251, 146, 60)).setLabelColor(rgb(0, 0, 0))
+                .setCallback(() -> controller.navigateTo("home"));
+
+        if (cards.length != 0) setPageHeight(16 + cards.length * (200 + 32));
+        else setPageHeight();
 
         Runnable layoutCleanUp = defaultLayout();
 
-        scroll = 65;
-
-        pageHeight = height - 65;
-
         currentRoute = () -> {
-            cartSummary.draw();
-//            cartList.draw();
+            int y = scroll;
+            if (cards.length == 0) {
+                fill(rgb(255, 255, 255));
+                textFont(fonts.get("800"), 32);
+                text("Cart is empty", width / 2f - textWidth("Cart is empty") / 2, height / 2f - 48);
+                goHome.draw();
+                return;
+            }
+            Arrays.stream(cards).forEach(card -> {
+                card.getCard().getEl().setParentY(y);
+                card.draw();
+            });
         };
 
         return () -> {
-            cartSummary.cleanUp();
-//            cartList.cleanUp();
+            Arrays.stream(cards).forEach(CartCard::cleanUp);
             layoutCleanUp.run();
         };
     }
@@ -635,9 +776,7 @@ public class View extends PApplet implements IView {
                 .setBgColor(rgb(251, 146, 60)).setLabelColor(rgb(0, 0, 0))
                 .setCallback(() -> controller.navigateTo("home"));
 
-        scroll = 65;
-
-        pageHeight = height - 65;
+        setPageHeight();
 
         currentRoute = () -> {
             fill(rgb(255, 255, 255));
@@ -657,24 +796,16 @@ public class View extends PApplet implements IView {
 
 //------------------------------------------------------     MISCELLANEOUS     ------------------------------------------------------
 
-    protected static View getInstance() {
+    static View getInstance() {
         return instance;
     }
 
-    protected Controller getController() {
+    IController getController() {
         return controller;
     }
 
-    public static IView getPublicInstance() {
-        return instance;
-    }
-
-    public static PApplet getPApplet() {
-        return instance;
-    }
-
     @Override
-    public void setController(Controller controller) {
+    public void setController(IController controller) {
         this.controller = controller;
     }
 
@@ -694,4 +825,8 @@ public class View extends PApplet implements IView {
                 Map.entry("error", this::error)
         );
     }
+}
+
+interface IPage {
+    void render();
 }

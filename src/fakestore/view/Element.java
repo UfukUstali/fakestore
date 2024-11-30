@@ -1,6 +1,6 @@
 package fakestore.view;
 
-class Element <T> {
+class Element<T> {
     private int parentX;
     private int parentY;
     private int x;
@@ -9,73 +9,65 @@ class Element <T> {
     private int height;
     private final T owner;
 
-    protected Element(T owner) {
+    Element(T owner) {
         this.owner = owner;
     }
 
-    protected int getParentX() {
-        return parentX;
-    }
-
-    protected int getParentY() {
-        return parentY;
-    }
-
-    protected int getX() {
+    int getX() {
         return x;
     }
 
-    protected int getY() {
+    int getY() {
         return y;
     }
 
-    protected int getWidth() {
+    int getWidth() {
         return width;
     }
 
-    protected int getHeight() {
+    int getHeight() {
         return height;
     }
 
-    protected T getOwner() {
+    T getOwner() {
         return owner;
     }
 
-    protected Element<T> setParentX(int parentX) {
+    Element<T> setParentX(int parentX) {
         int oldParentX = this.parentX;
         this.parentX = parentX;
         this.x = x - oldParentX + parentX;
         return this;
     }
 
-    protected Element<T> setParentY(int parentY) {
+    Element<T> setParentY(int parentY) {
         int oldParentY = this.parentY;
         this.parentY = parentY;
         this.y = this.y - oldParentY + parentY;
         return this;
     }
 
-    protected Element<T> setX(int x) {
+    Element<T> setX(int x) {
         this.x = x + parentX;
         return this;
     }
 
-    protected Element<T> setY(int y) {
+    Element<T> setY(int y) {
         this.y = y + parentY;
         return this;
     }
 
-    protected Element<T> setWidth(int width) {
+    Element<T> setWidth(int width) {
         this.width = width;
         return this;
     }
 
-    protected Element<T> setHeight(int height) {
+    Element<T> setHeight(int height) {
         this.height = height;
         return this;
     }
 
-    protected boolean isInside(int mouseX, int mouseY) {
+    boolean isInside(int mouseX, int mouseY) {
         return mouseX >= x &&
                 mouseX <= x + width &&
                 mouseY >= y &&

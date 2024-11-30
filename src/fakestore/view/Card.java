@@ -9,8 +9,8 @@ import processing.core.PImage;
 import java.text.NumberFormat;
 import java.util.Locale;
 
-class Card<T> implements IClickable {
-    private static final View view = View.getInstance();
+class Card<T extends CardComposer<T>> implements IClickable {
+    private final View view = View.getInstance();
     private final T owner;
     private IResponse response;
     private Product product;
@@ -26,17 +26,17 @@ class Card<T> implements IClickable {
             .setX(0).setY(1)
             .getOwner();
 
-    protected Card(T owner, Product product) {
+    Card(T owner, Product product) {
         this.product = product;
         this.owner = owner;
     }
 
-    protected Card(T owner, String id) {
+    Card(T owner, String id) {
         this.response = view.getController().get("/products/" + id);
         this.owner = owner;
     }
 
-    public void draw() {
+    void draw() {
         if (response != null) {
             switch (response.status()) {
                 case PENDING -> {
@@ -48,6 +48,7 @@ class Card<T> implements IClickable {
                 case SUCCESS -> {
                     loading.getEl().setParentX(el.getX());
                     ready(response.data(Product.class));
+                    owner.ready(product);
                     response = null;
                 }
                 case ERROR -> {
@@ -100,7 +101,6 @@ class Card<T> implements IClickable {
         view.fill(view.rgb(224, 40, 18));
         view.textFont(view.getFont("700"), 24);
         view.text(price, el.getX() + el.getWidth() - 24 - view.textWidth(price), el.getY() + el.getHeight() - 16 - 20);
-        // buttons
     }
 
     @Override
@@ -128,24 +128,20 @@ class Card<T> implements IClickable {
         view.getController().deregisterClickable(this);
     }
 
-    protected Card<T> setZ(int z) {
+    Card<T> setZ(int z) {
         this.z = z;
         return this;
     }
 
-    protected Element<Card<T>> getEl() {
+    Element<Card<T>> getEl() {
         return el;
     }
 
-    protected int getHeight() {
-        return el.getHeight() + 40;
+    int getHeight() {
+        return el.getHeight();
     }
 
-    protected IResponse getResponse() {
-        return response;
-    }
-
-    protected void init() {
+    void init() {
         rating.getEl()
                 .setParentX(el.getX()).setParentY(el.getY())
                 .setX(el.getHeight() + 24).setY(56)
@@ -177,7 +173,21 @@ class Card<T> implements IClickable {
         view.noStroke();
     }
 
-    protected T getOwner() {
+    T getOwner() {
         return owner;
     }
+}
+
+interface CardComposer<T extends CardComposer<T>> {
+    void draw();
+
+    void init();
+
+    void cleanUp();
+
+    int getHeight();
+
+    void ready(Product product);
+
+    Card<T> getCard();
 }

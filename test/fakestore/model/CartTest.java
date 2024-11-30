@@ -1,13 +1,10 @@
 package fakestore.model;
+
 import fakestore.EResult;
 import fakestore.Result;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-
-import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CartTest {
@@ -16,6 +13,7 @@ class CartTest {
     @BeforeEach
     void setUp() {
         model = Model.reset();
+        model.setArgs(new String[]{"1000"});
     }
 
     @Test
@@ -42,15 +40,6 @@ class CartTest {
     }
 
     @Test
-    void removeProductFromCart() {
-        Product product = new Product(1, "Test", "Test", 10, 1, .23f, 4, "Test", "Test", "Test", new String[]{"Test"});
-        model.addToCart(product);
-        Result<Boolean, String> result = model.removeFromCart(product);
-        assertEquals(EResult.OK, result.status());
-        assertEquals(0, model.getCart().getQuantityInCart(product));
-    }
-
-    @Test
     void removeProductFromCartWithQuantity() {
         Product product = new Product(1, "Test", "Test", 10, 1, .23f, 6, "Test", "Test", "Test", new String[]{"Test"});
         model.addToCart(product, 5);
@@ -70,11 +59,9 @@ class CartTest {
     @Test
     void buyProductExceedingCartQuantity() {
         Product product = new Product(1, "Test", "Test", 10, 1, .23f, 4, "Test", "Test", "Test", new String[]{"Test"});
-        var res = model.addToCart(product, 4);
-        assertEquals(EResult.OK, res.status());
-        Result<String, String> result = model.buy(product, 4);
-        assertEquals(EResult.OK, result.status());
-        assertEquals(0, model.getCart().getQuantityInCart(product));
+        model.addToCart(product, 4);
+        Result<String, String> bought = model.buy(product);
+        assertEquals(EResult.OK, bought.status());
     }
 
     @Test
@@ -87,41 +74,21 @@ class CartTest {
         assertEquals(EResult.OK, result.status());
         assertEquals(0, model.getCart().getProductsInCart().length);
     }
-}
 
-//class CartTest {
-//    private final Model model = Model.getInstance();
-//    @Test
-//    void getProducts() {
-//        ICart cart = model.getCart();
-//        assertNotNull(cart.getProductsInCart());
-//    }
-//
-//    @Test
-//    void addAndRemove() {
-//        Product product = new Product(1, "Test", "Test", 1, 1, .23f, 4, "Test", "Test", "Test", new String[]{"Test"});
-//        Result<Boolean, String> result = model.addToCart(product);
-//        assertEquals(EResult.OK, result.status());
-//        result = model.removeFromCart(product);
-//        assertEquals(EResult.OK, result.status());
-//    }
-//
-//    @Test
-//    void addAndRemoveWithQuantity() {
-//        Product product = new Product(1, "Test", "Test", 1, 1, .23f, 4, "Test", "Test", "Test", new String[]{"Test"});
-//        Result<Boolean, String> result = model.addToCart(product, 2);
-//        int quantity = model.getCart().getQuantityInCart(product);
-//        assertEquals(EResult.OK, result.status());
-//        result = model.removeFromCart(product, quantity);
-//        assertEquals(EResult.OK, result.status());
-//    }
-//
-//    @Test
-//    void clearCart() {
-//        Product product = new Product(1, "Test", "Test", 1, 1, .23f, 4, "Test", "Test", "Test", new String[]{"Test"});
-//        Result<Boolean, String> result = model.addToCart(product);
-//        assertEquals(EResult.OK, result.status());
-//        model.clearCart();
-//        assertEquals(0, model.getCart().getProductsInCart().length);
-//    }
-//}
+    @Test
+    void boughtQuantityTest() {
+        Product product = new Product(1, "Test", "Test", 10, 1, .23f, 4, "Test", "Test", "Test", new String[]{"Test"});
+        model.addToCart(product, 4);
+        model.buyAllInCart();
+        assertEquals(4, model.getCart().getBoughtQuantity(product));
+    }
+
+    @Test
+    void totalTest() {
+        Product product1 = new Product(1, "Test", "Test", 10, 1, .23f, 4, "Test", "Test", "Test", new String[]{"Test"});
+        Product product2 = new Product(2, "Test", "Test", 20, 1, .23f, 4, "Test", "Test", "Test", new String[]{"Test"});
+        model.addToCart(product1, 4);
+        model.addToCart(product2, 3);
+        assertEquals(100, model.getCart().getTotal());
+    }
+}

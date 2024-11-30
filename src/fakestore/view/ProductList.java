@@ -5,20 +5,15 @@ import fakestore.model.Products;
 import java.util.Arrays;
 
 class ProductList {
-    private static final View view = View.getInstance();
     private final Element<ProductList> el = new Element<>(this);
     private Products products;
     private ProductCard[] cards;
     private Pagination pagination;
 
-    protected ProductList() {
+    ProductList() {
     }
 
-    protected ProductList(Products products) {
-        setList(products);
-    }
-
-    protected void draw() {
+    void draw() {
         Arrays.stream(cards).forEach(card -> {
             card.getCard().getEl().setParentY(el.getY());
             card.draw();
@@ -27,7 +22,7 @@ class ProductList {
                 .getOwner().draw();
     }
 
-    protected void setList(Products products) {
+    void setList(Products products) {
         this.products = products;
         this.pagination = new Pagination(products.total(), products.skip()).getEl()
                 .setParentX(el.getX())
@@ -48,20 +43,20 @@ class ProductList {
         }
     }
 
-    protected Element<ProductList> getEl() {
+    Element<ProductList> getEl() {
         return el;
     }
 
-    protected void cleanUp() {
+    void cleanUp() {
         Arrays.stream(cards).forEach(ProductCard::cleanUp);
         pagination.cleanUp();
     }
 
-    protected boolean isReady() {
+    boolean isReady() {
         return products != null;
     }
 
-    protected int getHeight() {
+    int getHeight() {
         return 16 + products.products().length * (200 + 32) + pagination.getEl().getHeight();
     }
 }

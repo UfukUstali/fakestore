@@ -9,7 +9,7 @@ class FetchTest {
     @Test
     void fetchProducts_ShouldReturnProducts() throws InterruptedException {
         Fetch fetch = new Fetch("https://dummyjson.com");
-        var response = fetch.<Products>fetch("/products");
+        var response = fetch.fetch("/products");
         while (response.status().equals(Status.PENDING)) {
             Thread.sleep(1000);
         }
@@ -34,7 +34,7 @@ class FetchTest {
     void fetchForce() throws InterruptedException {
         String path = "/products";
         Fetch fetch = new Fetch("https://dummyjson.com");
-        var _response = fetch.<Products>fetch(path);
+        var _response = fetch.fetch(path);
         while (_response.status().equals(Status.PENDING)) {
             Thread.sleep(1000);
         }

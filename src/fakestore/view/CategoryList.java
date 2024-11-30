@@ -1,12 +1,12 @@
 package fakestore.view;
 
 class CategoryList {
-    private static final View view = View.getInstance();
+    private final View view = View.getInstance();
     private final Element<CategoryList> el = new Element<>(this);
     private Button[] links;
     private final String currentCategory;
 
-    protected CategoryList() {
+    CategoryList() {
         if (view.getController().getCurrentPath().equals("category")) {
             currentCategory = view.getController().getCurrentArgs().get("category").getAsString();
             return;
@@ -14,12 +14,7 @@ class CategoryList {
         this.currentCategory = null;
     }
 
-    protected CategoryList(String[] categories) {
-        this();
-        setList(categories);
-    }
-
-    protected void draw() {
+    void draw() {
         for (int i = 0; i < links.length; i++) {
             view.stroke(view.rgb(38, 38, 38));
             view.strokeWeight(1);
@@ -29,7 +24,7 @@ class CategoryList {
         }
     }
 
-    protected CategoryList setList(String[] categories) {
+    CategoryList setList(String[] categories) {
         this.links = new Button[categories.length];
         for (int i = 0; i < categories.length; i++) {
             String formatted = view.getFormatted(categories[i]);
@@ -39,24 +34,25 @@ class CategoryList {
                     .setParentX(el.getX()).setParentY(el.getY())
                     .setWidth(el.getWidth()).setHeight(24).getOwner()
                     .setBgColor(isCurrent ? view.rgb(251, 146, 60) : view.rgb(23, 23, 23))
-                    .setLabel(formatted.toString()).setLabelColor(isCurrent ? view.rgb(0, 0, 0) : view.rgb(255, 255, 255))
-                    .setLabelSize(16).setFont(view.getFont("600")).setLabelAlign(view.LEFT)
+                    .setLabel(formatted).setLabelColor(isCurrent ? view.rgb(0, 0, 0) : view.rgb(255, 255, 255))
+                    .setLabelSize(16).setFont(view.getFont("600")).setLabelAlign()
                     .setCallback(() -> view.getController().navigateTo("category", "category", categories[finalI]));
         }
         return this;
     }
 
-    protected Element<CategoryList> getEl() {
+    Element<CategoryList> getEl() {
         return el;
     }
 
-    protected void cleanUp() {
+    void cleanUp() {
+        if (links == null) return;
         for (Button link : links) {
             link.cleanUp();
         }
     }
 
-    protected boolean isReady() {
+    boolean isReady() {
         return links != null;
     }
 }

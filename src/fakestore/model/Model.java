@@ -2,17 +2,14 @@ package fakestore.model;
 
 import fakestore.Result;
 
-public class Model {
+class Model implements IModel {
+    // singleton
     private static final Model instance = new Model();
     private final Fetch fetch = new Fetch("https://dummyjson.com");
     private Cart cart = new Cart(this);
     private double balance;
 
     private Model() {
-    }
-
-    public static Model reset() {
-        return new Model().setCart();
     }
 
     public IResponse get(String path) {
@@ -31,10 +28,6 @@ public class Model {
         return cart.add(product, quantity);
     }
 
-    public Result<Boolean, String> removeFromCart(Product product) {
-        return cart.remove(product);
-    }
-
     public Result<Boolean, String> removeFromCart(Product product, int quantity) {
         return cart.remove(product, quantity);
     }
@@ -43,33 +36,38 @@ public class Model {
         return cart.buy(product);
     }
 
-    public Result<String, String> buy(Product product, int quantity) {
-        return cart.buy(product, quantity);
-    }
-
     public Result<Boolean, String> buyAllInCart() {
         return cart.buyAllInCart();
-    }
-
-    public void clearCart() {
-        cart.clear();
     }
 
     public double getBalance() {
         return balance;
     }
 
-    protected void setBalance(double balance) {
+    void setBalance(double balance) {
         this.balance = balance;
     }
 
-    public static Model getInstance() {
+    static Model getInstance() {
         return instance;
     }
 
     public void setArgs(String[] args) {
-        if (args.length == 0) return;
-        balance = Double.parseDouble(args[0]);
+        try {
+            if (args.length == 0) throw new Exception();
+            balance = Double.parseDouble(args[0]);
+        } catch (NumberFormatException e) {
+            balance = Math.random() * 5000 + 5000;
+            System.err.println("Invalid balance argument: " + args[0] + ", using random balance: " + balance);
+        } catch (Exception e) {
+            balance = Math.random() * 5000 + 5000;
+            System.out.println("No balance argument, using random balance: " + balance);
+        }
+    }
+
+    // reset the model to its initial state when testing
+    static Model reset() {
+        return new Model().setCart();
     }
 
     private Model setCart() {

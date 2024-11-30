@@ -1,14 +1,16 @@
 package fakestore.model;
+
 import com.google.gson.Gson;
 
-public class Response implements IResponse {
+class Response implements IResponse {
+    // we don't want to create a new Gson object for every response instance
     private static final Gson gson = new Gson();
     private Status status;
     private String data;
     private Object dataObject;
     private String error;
 
-    protected Response(Status status, String data, String error) {
+    Response(Status status, String data, String error) {
         this.status = status;
         this.data = data;
         this.error = error;
@@ -18,6 +20,7 @@ public class Response implements IResponse {
         return status;
     }
 
+    @SuppressWarnings("unchecked")
     public <T> T data(Class<T> type) {
         return dataObject != null ? (T) dataObject : (T) (dataObject = gson.fromJson(data, type));
     }
@@ -26,7 +29,7 @@ public class Response implements IResponse {
         return error;
     }
 
-    protected void set(Status status, String data, String error) {
+    void set(Status status, String data, String error) {
         this.status = status;
         this.data = data;
         this.error = error;

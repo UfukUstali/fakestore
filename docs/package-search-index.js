@@ -1,0 +1,1 @@
+packageSearchIndex = [{"l":"All Packages","u":"allpackages-index.html"},{"l":"fakestore"},{"l":"fakestore.controller"},{"l":"fakestore.model"},{"l":"fakestore.view"}];updateSearchResults();

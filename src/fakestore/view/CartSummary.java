@@ -2,35 +2,44 @@ package fakestore.view;
 
 import fakestore.model.ICart;
 import fakestore.model.Product;
-import fakestore.model.Products;
 
 import java.text.NumberFormat;
 import java.util.Locale;
 
 class CartSummary {
-    private static final View view = View.getInstance();
+    private final View view = View.getInstance();
     private final Element<CartSummary> el = new Element<>(this);
     private final ICart cart = view.getController().getCart();
     private final Button checkoutButton = new Button()
             .setZ(1)
             .setBgColor(view.rgb(251, 146, 60)).setLabelColor(view.rgb(0, 0, 0))
-            .setLabel("Checkout").setLabelSize(20).setFont(view.getFont("500"))
-            .setCallback(() -> view.getController().navigateTo("cart"));
+            .setLabelSize(20).setFont(view.getFont("500"));
 
-    protected CartSummary() {
+    CartSummary() {
+        boolean isCart = view.getController().getCurrentPath().equals("cart");
         el.setX(view.width - 288 - 16).setY(16 + 65)
                 .setWidth(288);
         checkoutButton.getEl()
                 .setParentX(el.getX()).setParentY(el.getY())
                 .setX(16)
-                .setWidth(256).setHeight(32);
+                .setWidth(256).setHeight(32).getOwner()
+                .setLabel(isCart ? "Buy All" : "Checkout")
+                .setCallback(isCart ? () -> {
+                    var res = view.getController().buyAllInCart();
+                    switch (res.status()) {
+                        case OK -> {
+                            view.toast("Congratulations!");
+                            view.getController().navigateTo("home");
+                        }
+                        case ERROR -> view.toast(res.error());
+                    }
+                } : () -> view.getController().navigateTo("cart"));
     }
 
-    protected void draw() {
+    void draw() {
         Product[] products = cart.getProductsInCart();
         boolean canList = products.length > 0;
         el.setHeight(64 + 32 + (canList ? Math.min(products.length, 13) * (32) : 64) + 32 + 16);
-
         // bg
         view.fill(view.rgb(23, 23, 23));
         view.stroke(view.rgb(38, 38, 38));
@@ -83,7 +92,7 @@ class CartSummary {
         checkoutButton.getEl().setY(el.getHeight() - 32 - 16).getOwner().draw();
     }
 
-    protected void cleanUp() {
+    void cleanUp() {
         checkoutButton.cleanUp();
     }
 }

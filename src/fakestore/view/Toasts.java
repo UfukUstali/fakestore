@@ -4,24 +4,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 class Toasts {
-    private static final Toasts instance = new Toasts();
-    private View view;
-    private static final int PADDING = 24;
+    private final View view;
     private final ArrayList<Toast> toasts = new ArrayList<>();
 
-    private Toasts() {
+    Toasts(View view) {
+        this.view = view;
     }
 
-    public static Toasts getInstance(View view) {
-        instance.view = view;
-        return instance;
-    }
-
-    protected void add(String message) {
+    void add(String message) {
         toasts.add(new Toast(message, null));
     }
 
-    protected void add(String message, String id) {
+    void add(String message, String id) {
         if (id == null) {
             add(message);
             return;
@@ -36,12 +30,12 @@ class Toasts {
         toasts.add(new Toast(message, id));
     }
 
-    protected void draw() {
+    void draw() {
         ArrayList<Toast> toRemove = new ArrayList<>();
         List<Toast> reversed = toasts.reversed();
         for (int i = 0; i < reversed.size(); i++) {
             Toast toast = reversed.get(i);
-            toast.draw(view.height - ((PADDING + 32) * (i + 1)));
+            toast.draw(view.height - ((24 + 32) * (i + 1)));
             toast.setTimeToLive(toast.timeToLive - 100f / 6);
             if ((int) toast.timeToLive <= 0) toRemove.add(toast);
         }
@@ -53,6 +47,7 @@ class Toasts {
     }
 
     private class Toast {
+        // we don't want to initialize a new int every time a toast is created
         private static final int MAX_TIME_TO_LIVE = 3000;
         private String message;
         private final String id;
@@ -80,7 +75,7 @@ class Toasts {
                 });
 
         private Toast(String message, String id) {
-            this.message = view.truncate(message, width - 32,  16, true);
+            this.message = view.truncate(message, width - 32, 16, true);
             this.id = id;
         }
 

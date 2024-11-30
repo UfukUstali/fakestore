@@ -1,11 +1,11 @@
 package fakestore.view;
 
 import com.google.gson.JsonObject;
-import fakestore.controller.Controller;
+import fakestore.controller.IController;
 import processing.core.PFont;
 
 class Pagination {
-    private static final View view = View.getInstance();
+    private final View view = View.getInstance();
     private final Element<Pagination> el = new Element<>(this).setHeight(0);
     private boolean canPaginate;
     private final int limit;
@@ -15,7 +15,7 @@ class Pagination {
     private Button prev;
     private Button next;
 
-    protected Pagination(int total, int skip) {
+    Pagination(int total, int skip) {
         this.limit = 30;
         if (total <= limit) return;
         // array length
@@ -27,24 +27,24 @@ class Pagination {
         this.buttons = new Button[pageCount];
     }
 
-    protected void draw() {
+    void draw() {
         if (!canPaginate) return;
         for (Button button : buttons) button.getEl().setParentY(el.getY()).getOwner().draw();
         prev.getEl().setParentY(el.getY()).getOwner().draw();
         next.getEl().setParentY(el.getY()).getOwner().draw();
     }
 
-    protected Element<Pagination> getEl() {
+    Element<Pagination> getEl() {
         return el;
     }
 
-    protected void init() {
+    void init() {
         if (!canPaginate) {
             el.setHeight(0);
             return;
         }
         el.setWidth(48 + (pageCount * 40) + 32).setX(320 - (el.getWidth() / 2));
-        Controller controller = view.getController();
+        IController controller = view.getController();
         int bgColor = view.rgb(251, 146, 60);
         int labelColor = view.rgb(0, 0, 0);
         int currentBgColor = view.rgb(38, 38, 38);
@@ -103,11 +103,11 @@ class Pagination {
                 });
     }
 
-    protected boolean canPaginate() {
+    boolean canPaginate() {
         return canPaginate;
     }
 
-    protected void cleanUp() {
+    void cleanUp() {
         if (!canPaginate) return;
         for (Button button : buttons) button.cleanUp();
         prev.cleanUp();

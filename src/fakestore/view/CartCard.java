@@ -1,74 +1,54 @@
 package fakestore.view;
 
-import fakestore.Result;
-import fakestore.model.Cart;
 import fakestore.model.Product;
 
-
-class CartCard {
-    private static final View view = View.getInstance();
+class CartCard implements CardComposer<CartCard> {
+    private final View view = View.getInstance();
     private final Card<CartCard> card;
+    private final CartButtons cartButtons = new CartButtons();
 
-    protected CartCard(Product product) {
+    CartCard(Product product) {
         this.card = new Card<>(this, product);
         ready(product);
     }
 
     public void draw() {
         card.draw();
-        var response = card.getResponse();
         var el = card.getEl();
-        if (response != null) {
-            switch (response.status()) {
-                case PENDING -> {
-                    buttons();
-                    return;
-                }
-                case SUCCESS -> {
-                    ready(response.data(Product.class));
-                }
-                case ERROR -> {
-                    String error = response.error();
-                    buttons();
-                    view.fill(view.rgb(255, 255, 255));
-                    view.textFont(view.getFont("500"), 20);
-                    view.textAlign(view.CENTER);
-                    view.text(error, el.getX() + el.getWidth() / 2f, el.getY() + el.getHeight() / 2f);
-                    view.textAlign(view.LEFT, view.TOP);
-                    return;
-                }
-            }
-        }
-        // buttons
-        buttons();
+        view.strokeWeight(1);
+        cartButtons.getEl().setParentY(el.getY())
+                .getOwner().draw();
     }
 
-    protected Card<CartCard> getCard() {
+    @Override
+    public Card<CartCard> getCard() {
         return card;
     }
 
-    protected int getHeight() {
-        return card.getHeight() + 40;
+    @Override
+    public int getHeight() {
+        return card.getHeight() + 8 + cartButtons.getEl().getHeight();
     }
 
-    protected void init() {
+    @Override
+    public void init() {
         card.init();
+        cartButtons.getEl()
+                .setParentX(card.getEl().getX()).setParentY(card.getEl().getY())
+                .setX(4).setY(card.getEl().getHeight() + 8)
+                .setWidth(card.getEl().getWidth() - 8).setHeight(32)
+                .getOwner().setZ(card.getZ());
+        cartButtons.init();
     }
 
-    protected void cleanUp() {
+    @Override
+    public void cleanUp() {
         card.cleanUp();
+        cartButtons.cleanUp();
     }
 
-    private void ready(Product p) {
-
-    }
-
-    private void buttons() {
-        var el = card.getEl();
-        view.strokeWeight(1);
-        view.stroke(view.rgb(38, 38, 38));
-
-        view.noStroke();
-        view.strokeWeight(2);
+    @Override
+    public void ready(Product product) {
+        cartButtons.setProduct(product);
     }
 }

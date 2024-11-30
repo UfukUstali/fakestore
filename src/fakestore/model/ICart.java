@@ -1,13 +1,23 @@
 package fakestore.model;
 
-import fakestore.Result;
-
 public interface ICart {
+    /**
+     * Get a copy of all the products in the cart.
+     */
     Product[] getProductsInCart();
 
+    /**
+     * Get the quantity of a product in the cart.
+     */
     int getQuantityInCart(Product product);
 
-    double getTotal();
+    /**
+     * Get how many of a product has been bought.
+     */
+    int getBoughtQuantity(Product product);
 
-    Product[] getBoughtProducts();
+    /**
+     * Get how much all the products in the cart cost.
+     */
+    double getTotal();
 }
